@@ -1,2 +1,3 @@
 # Asmane
+https://docs.google.com/spreadsheets/d/1HkYtBf-FMcangQyitczhMPpSIDtTpqBOzU01jV-YoEM/edit?gid=373976808#gid=373976808
 喘息の自己管理アプリです。ピークフローや症状を記録することで治療や予防に役立てます。シンプルな入力で確実に記録できます。気象データの自動取得、振り返りサマリーなど便利な機能もあります。ACTスコアも自動作成。
