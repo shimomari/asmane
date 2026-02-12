@@ -47,7 +47,7 @@ class _MainScreenState extends State<MainScreen> {
         leading: IconButton(
           icon: const Icon(Icons.menu),
           onPressed: () {
-            // 今後ハンバーガーメニューを実装
+            // 1. ハンバーガーメニューを実装
           },
         ),
       ),
@@ -109,11 +109,20 @@ class _MainScreenState extends State<MainScreen> {
                 ],
               ),
             ),
+           
+           // 5. 睡眠の記録セクション
             const Divider(),
             const SleepSection(),
             const Divider(),
+
+           // 6. トリガーの記録セクション
+
+            const TriggerSection(), // 6. トリガーの記録を追加
+            const Divider(),        // 次の項目との仕切り線
+
             // 9. 自由メモ
             const SectionTitle(title: '自由メモ'),
+
             const Padding(
               padding: EdgeInsets.all(16.0),
               child: TextField(
@@ -151,8 +160,7 @@ class SectionTitle extends StatelessWidget {
     );
   }
 }
-
-//症状ボタン
+//症状ボタンのセクション
 class SymptomButton extends StatelessWidget {
   final String label;
   const SymptomButton({super.key, required this.label});
@@ -208,3 +216,49 @@ class _SleepSectionState extends State<SleepSection> {
     );
   }
 }  
+
+// --- 6. トリガー（要因）のセクションの本体 ---
+class TriggerSection extends StatefulWidget {
+  const TriggerSection({super.key});
+
+  @override
+  State<TriggerSection> createState() => _TriggerSectionState();
+}
+
+class _TriggerSectionState extends State<TriggerSection> {
+  // 表示する項目リスト
+  final Map<String, bool> _triggers = {
+    '埃・ハウスダスト': false,
+    '気圧変化': false,
+    '風邪': false,
+    '運動': false,
+    'タバコ': false,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const SectionTitle(title: "6.トリガー（要因）の記録"),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Wrap(
+            spacing: 8.0,
+            children: _triggers.keys.map((String key) {
+              return FilterChip(
+                label: Text(key),
+                selected: _triggers[key]!,
+                onSelected: (bool value) {
+                  setState(() {
+                    _triggers[key] = value;
+                  });
+                },
+                selectedColor: Colors.orange[200], // トリガーはオレンジ色に
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
