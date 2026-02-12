@@ -31,12 +31,29 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  // --- 状態管理変数 ---
   int _currentPeakFlow = 400;
 
-  // --- 便利関数 ---
   String getNowTime() {
     return DateFormat('yyyy年MM月dd日 HH:mm').format(DateTime.now());
+  }
+
+  // 🔧 修正：ダイアログをクラス内に移動
+  void _showSaveDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("登録完了"),
+          content: const Text("今日の体調をしっかり記録しました！"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -46,9 +63,7 @@ class _MainScreenState extends State<MainScreen> {
         title: const Text('アスマネ'),
         leading: IconButton(
           icon: const Icon(Icons.menu),
-          onPressed: () {
-            // 1. ハンバーガーメニューを実装
-          },
+          onPressed: () {},
         ),
       ),
       body: SingleChildScrollView(
@@ -64,7 +79,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
             const Divider(),
 
-            // 3. ピークフローの記録（常時表示ドラムロール）
+            // 3. ピークフロー
             const SectionTitle(title: 'ピークフローの記録'),
             SizedBox(
               height: 120,
@@ -84,8 +99,12 @@ class _MainScreenState extends State<MainScreen> {
                       '$v L/min',
                       style: TextStyle(
                         fontSize: 22,
-                        fontWeight: _currentPeakFlow == v ? FontWeight.bold : FontWeight.normal,
-                        color: _currentPeakFlow == v ? Colors.blue : Colors.black87,
+                        fontWeight: _currentPeakFlow == v
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: _currentPeakFlow == v
+                            ? Colors.blue
+                            : Colors.black87,
                       ),
                     ),
                   );
@@ -94,7 +113,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
             const Divider(),
 
-            // 4. 症状の記録
+            // 4. 症状
             const SectionTitle(title: '今の症状'),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -109,20 +128,19 @@ class _MainScreenState extends State<MainScreen> {
                 ],
               ),
             ),
-           
-           // 5. 睡眠の記録セクション
+
             const Divider(),
             const SleepSection(),
             const Divider(),
 
-           // 6. トリガーの記録セクション
+            const TriggerSection(),
+            const Divider(),
 
-            const TriggerSection(), // 6. トリガーの記録を追加
-            const Divider(),        // 次の項目との仕切り線
+            const RelieverSection(),
+            const Divider(),
 
             // 9. 自由メモ
             const SectionTitle(title: '自由メモ'),
-
             const Padding(
               padding: EdgeInsets.all(16.0),
               child: TextField(
@@ -133,6 +151,33 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
             ),
+
+            const SizedBox(height: 30),
+
+            // 🔧 修正：クラス内メソッドを呼ぶ
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _showSaveDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "この内容で登録する",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 50),
           ],
         ),
       ),
@@ -140,16 +185,124 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// --- カスタムウィジェット（部品） ---
-//タイトルの見た目を作る//
-class SectionTitle extends StatelessWidget {
-  final String title;
-  const SectionTitle({super.key, required this.title});
+// --- 以下、設計図（クラス）たち ---
+
+class SleepSection extends StatelessWidget {
+  const SleepSection({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Column(children: [
+      SectionTitle(title: "睡眠"),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          SymptomButton(label: "就"),
+          SymptomButton(label: "起"),
+          SymptomButton(label: "中途"),
+        ],
+      ),
+    ]);
+  }
+}
+
+class TriggerSection extends StatelessWidget {
+  const TriggerSection({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Column(children: [
+      SectionTitle(title: "トリガー（要因）の記録"),
+      Wrap(
+        spacing: 8,
+        children: [
+          SymptomButton(label: "埃・ハウスダスト"),
+          SymptomButton(label: "気圧変化"),
+          SymptomButton(label: "風邪"),
+          SymptomButton(label: "運動"),
+          SymptomButton(label: "タバコ"),
+        ],
+      ),
+    ]);
+  }
+}
+
+class RelieverSection extends StatefulWidget {
+  const RelieverSection({super.key});
+  @override
+  State<RelieverSection> createState() => _RelieverSectionState();
+}
+
+class _RelieverSectionState extends State<RelieverSection> {
+  int _relieverCount = 0;
+  int _stockCount = 60;
+  int _pillCount = 0;
 
   @override
   Widget build(BuildContext context) {
+    Color relieverColor = _relieverCount > 0
+        ? Colors.red[100 * (_relieverCount > 9 ? 9 : _relieverCount)]!
+        : Colors.grey[200]!;
+
+    Color pillColor = _pillCount > 0
+        ? Colors.purple[100 * (_pillCount > 9 ? 9 : _pillCount)]!
+        : Colors.grey[200]!;
+
+    return Column(children: [
+      const SectionTitle(title: "7．緊急時の記録（吸入・内服）"),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Column(children: [
+            const Text("吸入"),
+            GestureDetector(
+              onTap: () => setState(() {
+                _relieverCount++;
+                if (_stockCount > 0) _stockCount--;
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: relieverColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(child: Text("$_relieverCount回")),
+              ),
+            ),
+            Text("残量: $_stockCount回"),
+          ]),
+          Column(children: [
+            const Text("内服"),
+            GestureDetector(
+              onTap: () => setState(() {
+                _pillCount++;
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: pillColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(child: Text("$_pillCount回")),
+              ),
+            ),
+            const Text(" "),
+          ]),
+        ],
+      ),
+    ]);
+  }
+}
+
+class SectionTitle extends StatelessWidget {
+  final String title;
+  const SectionTitle({super.key, required this.title});
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      padding: const EdgeInsets.all(16.0),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(
@@ -160,105 +313,18 @@ class SectionTitle extends StatelessWidget {
     );
   }
 }
-//症状ボタンのセクション
+
 class SymptomButton extends StatelessWidget {
   final String label;
   const SymptomButton({super.key, required this.label});
-
   @override
   Widget build(BuildContext context) {
-    return FilterChip(
-      label: Text(label),
-      onSelected: (bool selected) {
-        // 今後選択状態を管理
-      },
-    );
-  }
-}
-// 睡眠セクションのボタンをまとめて作る部品
-class SleepSection extends StatefulWidget {
-  const SleepSection({super.key});
-
-  @override
-  State<SleepSection> createState() => _SleepSectionState();
-}
-
-class _SleepSectionState extends State<SleepSection> {
-  // それぞれのボタンが押されているかどうかを覚えておく変数
-  bool isAsleep = false;
-  bool isAwake = false;
-  bool isMidAwake = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SectionTitle(title: "5．睡眠"), // タイトルを表示
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildToggleButton("就寝", isAsleep, () => setState(() => isAsleep = !isAsleep)),
-            _buildToggleButton("起床", isAwake, () => setState(() => isAwake = !isAwake)),
-            _buildToggleButton("中途覚醒", isMidAwake, () => setState(() => isMidAwake = !isMidAwake)),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // ボタンひとつひとつを作るためのレシピ
-  Widget _buildToggleButton(String label, bool active, VoidCallback onTap) {
-    return FilterChip(
-      label: Text(label),
-      selected: active,
-      onSelected: (bool value) => onTap(),
-      selectedColor: Colors.blue[200], // 押した時の色
-    );
-  }
-}  
-
-// --- 6. トリガー（要因）のセクションの本体 ---
-class TriggerSection extends StatefulWidget {
-  const TriggerSection({super.key});
-
-  @override
-  State<TriggerSection> createState() => _TriggerSectionState();
-}
-
-class _TriggerSectionState extends State<TriggerSection> {
-  // 表示する項目リスト
-  final Map<String, bool> _triggers = {
-    '埃・ハウスダスト': false,
-    '気圧変化': false,
-    '風邪': false,
-    '運動': false,
-    'タバコ': false,
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SectionTitle(title: "6.トリガー（要因）の記録"),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Wrap(
-            spacing: 8.0,
-            children: _triggers.keys.map((String key) {
-              return FilterChip(
-                label: Text(key),
-                selected: _triggers[key]!,
-                onSelected: (bool value) {
-                  setState(() {
-                    _triggers[key] = value;
-                  });
-                },
-                selectedColor: Colors.orange[200], // トリガーはオレンジ色に
-              );
-            }).toList(),
-          ),
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: FilterChip(
+        label: Text(label),
+        onSelected: (bool value) {},
+      ),
     );
   }
 }
