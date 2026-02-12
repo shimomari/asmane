@@ -95,7 +95,7 @@ class _MainScreenState extends State<MainScreen> {
             const Divider(),
 
             // 4. 症状の記録
-            const SectionTitle(title: '今日の症状'),
+            const SectionTitle(title: '今の症状'),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.0),
               child: Wrap(
@@ -110,7 +110,8 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
             const Divider(),
-
+            const SleepSection(),
+            const Divider(),
             // 9. 自由メモ
             const SectionTitle(title: '自由メモ'),
             const Padding(
@@ -131,7 +132,7 @@ class _MainScreenState extends State<MainScreen> {
 }
 
 // --- カスタムウィジェット（部品） ---
-
+//タイトルの見た目を作る//
 class SectionTitle extends StatelessWidget {
   final String title;
   const SectionTitle({super.key, required this.title});
@@ -151,6 +152,7 @@ class SectionTitle extends StatelessWidget {
   }
 }
 
+//症状ボタン
 class SymptomButton extends StatelessWidget {
   final String label;
   const SymptomButton({super.key, required this.label});
@@ -165,3 +167,44 @@ class SymptomButton extends StatelessWidget {
     );
   }
 }
+// 睡眠セクションのボタンをまとめて作る部品
+class SleepSection extends StatefulWidget {
+  const SleepSection({super.key});
+
+  @override
+  State<SleepSection> createState() => _SleepSectionState();
+}
+
+class _SleepSectionState extends State<SleepSection> {
+  // それぞれのボタンが押されているかどうかを覚えておく変数
+  bool isAsleep = false;
+  bool isAwake = false;
+  bool isMidAwake = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const SectionTitle(title: "5．睡眠"), // タイトルを表示
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildToggleButton("就寝", isAsleep, () => setState(() => isAsleep = !isAsleep)),
+            _buildToggleButton("起床", isAwake, () => setState(() => isAwake = !isAwake)),
+            _buildToggleButton("中途覚醒", isMidAwake, () => setState(() => isMidAwake = !isMidAwake)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ボタンひとつひとつを作るためのレシピ
+  Widget _buildToggleButton(String label, bool active, VoidCallback onTap) {
+    return FilterChip(
+      label: Text(label),
+      selected: active,
+      onSelected: (bool value) => onTap(),
+      selectedColor: Colors.blue[200], // 押した時の色
+    );
+  }
+}  
