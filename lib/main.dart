@@ -1,4 +1,3 @@
-//ルールと変数（1行目〜）
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
@@ -9,11 +8,16 @@ void main() {
 
 class AsmaneApp extends StatelessWidget {
   const AsmaneApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'アスマネ',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.lightBlue),
+      ),
       home: const MainScreen(),
     );
   }
@@ -21,33 +25,47 @@ class AsmaneApp extends StatelessWidget {
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
+
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentPeakFlow = 400; // ピークフローの値を保存する変数
+  // --- 状態管理変数 ---
+  int _currentPeakFlow = 400;
 
+  // --- 便利関数 ---
   String getNowTime() {
     return DateFormat('yyyy年MM月dd日 HH:mm').format(DateTime.now());
   }
 
-  //メイン画面の見た目
-@override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('アスマネ')),
+      appBar: AppBar(
+        title: const Text('アスマネ'),
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () {
+            // 今後ハンバーガーメニューを実装
+          },
+        ),
+      ),
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // 2. 現在時刻の表示
             Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(getNowTime(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                getNowTime(),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
             const Divider(),
+
+            // 3. ピークフローの記録（常時表示ドラムロール）
             const SectionTitle(title: 'ピークフローの記録'),
-            
-            // --- ここにドラムロールが直接入ります ---
             SizedBox(
               height: 120,
               child: CupertinoPicker(
@@ -74,23 +92,36 @@ class _MainScreenState extends State<MainScreen> {
                 }).toList(),
               ),
             ),
-            
             const Divider(),
+
+            // 4. 症状の記録
             const SectionTitle(title: '今日の症状'),
-            const Wrap(
-              spacing: 10,
-              children: [
-                SymptomButton(label: '咳'),
-                SymptomButton(label: 'たん'),
-                SymptomButton(label: '息苦しさ'),
-                SymptomButton(label: '倦怠感'),
-              ],
-            ),
-            const Divider(),
-            const SectionTitle(title: '自由メモ'),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: TextField(decoration: InputDecoration(hintText: '50字程度で入力...')),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  SymptomButton(label: '咳'),
+                  SymptomButton(label: 'たん'),
+                  SymptomButton(label: '息苦しさ'),
+                  SymptomButton(label: '倦怠感'),
+                ],
+              ),
+            ),
+            const Divider(),
+
+            // 9. 自由メモ
+            const SectionTitle(title: '自由メモ'),
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: TextField(
+                maxLength: 50,
+                decoration: InputDecoration(
+                  hintText: '50字程度で入力...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
             ),
           ],
         ),
@@ -99,15 +130,23 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-//自作部品
+// --- カスタムウィジェット（部品） ---
+
 class SectionTitle extends StatelessWidget {
   final String title;
   const SectionTitle({super.key, required this.title});
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      ),
     );
   }
 }
@@ -115,8 +154,14 @@ class SectionTitle extends StatelessWidget {
 class SymptomButton extends StatelessWidget {
   final String label;
   const SymptomButton({super.key, required this.label});
+
   @override
   Widget build(BuildContext context) {
-    return FilterChip(label: Text(label), onSelected: (bool value) {});
+    return FilterChip(
+      label: Text(label),
+      onSelected: (bool selected) {
+        // 今後選択状態を管理
+      },
+    );
   }
 }
