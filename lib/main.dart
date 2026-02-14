@@ -33,11 +33,14 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentPeakFlow = 400;
 
+  // 🔧 ユーザーがカスタマイズできるリスト（ここを動的に表示するようにしました）
+  List<String> _mySymptoms = ['咳', 'たん', '息苦しさ', '倦怠感'];
+  List<String> _myTriggers = ['埃・ハウスダスト', '気圧変化', '風邪', '運動', 'タバコ'];
+
   String getNowTime() {
     return DateFormat('yyyy年MM月dd日 HH:mm').format(DateTime.now());
   }
 
-  // 🔧 修正：ダイアログをクラス内に移動
   void _showSaveDialog() {
     showDialog(
       context: context,
@@ -62,14 +65,15 @@ class _MainScreenState extends State<MainScreen> {
       appBar: AppBar(
         title: const Text('アスマネ'),
         leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {},
+          icon: const Icon(Icons.settings),
+          onPressed: () {
+            // ここにあとで設定ページを開く処理を書きます
+          },
         ),
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 2. 現在時刻の表示
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -79,7 +83,6 @@ class _MainScreenState extends State<MainScreen> {
             ),
             const Divider(),
 
-            // 3. ピークフロー
             const SectionTitle(title: 'ピークフローの記録'),
             SizedBox(
               height: 120,
@@ -99,12 +102,8 @@ class _MainScreenState extends State<MainScreen> {
                       '$v L/min',
                       style: TextStyle(
                         fontSize: 22,
-                        fontWeight: _currentPeakFlow == v
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: _currentPeakFlow == v
-                            ? Colors.blue
-                            : Colors.black87,
+                        fontWeight: _currentPeakFlow == v ? FontWeight.bold : FontWeight.normal,
+                        color: _currentPeakFlow == v ? Colors.blue : Colors.black87,
                       ),
                     ),
                   );
@@ -113,19 +112,14 @@ class _MainScreenState extends State<MainScreen> {
             ),
             const Divider(),
 
-            // 4. 症状
-            const SectionTitle(title: '今の症状'),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
+            // 4. 今の症状（カスタマイズ対応）
+            SectionTitle(title: '今の症状'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Wrap(
                 spacing: 10,
                 runSpacing: 10,
-                children: [
-                  SymptomButton(label: '咳'),
-                  SymptomButton(label: 'たん'),
-                  SymptomButton(label: '息苦しさ'),
-                  SymptomButton(label: '倦怠感'),
-                ],
+                children: _mySymptoms.map((s) => SymptomButton(label: s)).toList(),
               ),
             ),
 
@@ -133,13 +127,21 @@ class _MainScreenState extends State<MainScreen> {
             const SleepSection(),
             const Divider(),
 
-            const TriggerSection(),
-            const Divider(),
+            // 6. トリガー（ここもリストから表示するようにしました）
+            const SectionTitle(title: 'トリガー（要因）の記録'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _myTriggers.map((t) => SymptomButton(label: t)).toList(),
+              ),
+            ),
 
+            const Divider(),
             const RelieverSection(),
             const Divider(),
 
-            // 9. 自由メモ
             const SectionTitle(title: '自由メモ'),
             const Padding(
               padding: EdgeInsets.all(16.0),
@@ -154,7 +156,6 @@ class _MainScreenState extends State<MainScreen> {
 
             const SizedBox(height: 30),
 
-            // 🔧 修正：クラス内メソッドを呼ぶ
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: SizedBox(
@@ -185,7 +186,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// --- 以下、設計図（クラス）たち ---
+// --- コンポーネント（クラス）群 ---
 
 class SleepSection extends StatelessWidget {
   const SleepSection({super.key});
@@ -199,26 +200,6 @@ class SleepSection extends StatelessWidget {
           SymptomButton(label: "就"),
           SymptomButton(label: "起"),
           SymptomButton(label: "中途"),
-        ],
-      ),
-    ]);
-  }
-}
-
-class TriggerSection extends StatelessWidget {
-  const TriggerSection({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Column(children: [
-      SectionTitle(title: "トリガー（要因）の記録"),
-      Wrap(
-        spacing: 8,
-        children: [
-          SymptomButton(label: "埃・ハウスダスト"),
-          SymptomButton(label: "気圧変化"),
-          SymptomButton(label: "風邪"),
-          SymptomButton(label: "運動"),
-          SymptomButton(label: "タバコ"),
         ],
       ),
     ]);
@@ -239,11 +220,11 @@ class _RelieverSectionState extends State<RelieverSection> {
   @override
   Widget build(BuildContext context) {
     Color relieverColor = _relieverCount > 0
-        ? Colors.red[100 * (_relieverCount > 9 ? 9 : _relieverCount)]!
+        ? Colors.red[(_relieverCount * 100).clamp(100, 900)]!
         : Colors.grey[200]!;
 
     Color pillColor = _pillCount > 0
-        ? Colors.purple[100 * (_pillCount > 9 ? 9 : _pillCount)]!
+        ? Colors.purple[(_pillCount * 100).clamp(100, 900)]!
         : Colors.grey[200]!;
 
     return Column(children: [
