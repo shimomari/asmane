@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-
 void main() {
   runApp(const AsmaneApp());
 }
@@ -354,7 +354,7 @@ class _MainUIRegistrationPageState extends State<MainUIRegistrationPage> {
     showDialog(context: context, builder: (ctx) => AlertDialog(
       title: const Text("追加"),
       content: TextField(controller: c, autofocus: true),
-      
+
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("キャンセル")),
         TextButton(onPressed: () { if(c.text.isNotEmpty) setState(() => list.add(c.text)); Navigator.pop(ctx); }, child: const Text("追加"))
@@ -364,7 +364,57 @@ class _MainUIRegistrationPageState extends State<MainUIRegistrationPage> {
 }
 
 // --- スタブページ ---
-class WeeklyGraphPage extends StatelessWidget { const WeeklyGraphPage({super.key}); @override Widget build(BuildContext context) { return Scaffold(appBar: AppBar(title: const Text("週のグラフ")), body: const Center(child: Text("折れ線グラフをここに実装"))); } }
+class WeeklyGraphPage extends StatelessWidget {
+  const WeeklyGraphPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // グラフに表示するサンプルの点（xが曜日、yがピークフロー値）
+    final List<FlSpot> spots = [
+      const FlSpot(0, 350), // 月曜
+      const FlSpot(1, 380), // 火曜
+      const FlSpot(2, 320), // 水曜
+      const FlSpot(3, 400), // 木曜
+      const FlSpot(4, 390), // 金曜
+      const FlSpot(5, 420), // 土曜
+      const FlSpot(6, 410), // 日曜
+    ];
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("週のピークフローグラフ")),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            const Text("1週間の推移", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 30),
+            AspectRatio(
+              aspectRatio: 1.5,
+              child: LineChart(
+                LineChartData(
+                  minY: 0,
+                  maxY: 600,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true, // 線を滑らかにする
+                      color: Colors.blue,
+                      barWidth: 4,
+                      dotData: const FlDotData(show: true),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text("※現在はサンプルデータを表示しています"),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class MonthlyGraphPage extends StatelessWidget { const MonthlyGraphPage({super.key}); @override Widget build(BuildContext context) { return Scaffold(appBar: AppBar(title: const Text("4週間のデータ(ACT)")), body: const Center(child: Text("ACT自動計算ロジックをここに実装"))); } }
 class YearlyGraphPage extends StatelessWidget { const YearlyGraphPage({super.key}); @override Widget build(BuildContext context) { return Scaffold(appBar: AppBar(title: const Text("年間のグラフ")), body: const Center(child: Text("年間の傾向をここに実装"))); } }
 class OneTapCallPage extends StatelessWidget { const OneTapCallPage({super.key}); @override Widget build(BuildContext context) { return Scaffold(appBar: AppBar(title: const Text("ワンタップ受診")), body: const Center(child: Text("緊急連絡先ボタンをここに実装"))); } }
