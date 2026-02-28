@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'health_data.dart'; // さっき作った魔法のファイル
 void main() {
   runApp(const AsmaneApp());
 }
@@ -23,6 +24,8 @@ class AsmaneApp extends StatelessWidget {
   }
 }
 
+// --- 27行目から34行目の直前までをこれに差し替えてください ---
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -30,7 +33,11 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
+// --- ここまで ---
 class _MainScreenState extends State<MainScreen> {
+  List<PefRecord> pefRecords = [];
+  List<SleepSession> sleepSessions = [];
+  SleepSession? activeSleepSession;
   // --- 管理データ ---
   int _currentPeakFlow = 400;
   List<String> _mySymptoms = ['咳', 'たん', '息苦しさ', '喘鳴'];
@@ -130,10 +137,15 @@ class _MainScreenState extends State<MainScreen> {
             decoration: BoxDecoration(color: Colors.lightBlue),
             child: Text('アスマネ', style: TextStyle(color: Colors.white, fontSize: 24)),
           ),
-          _drawerTile(Icons.bar_chart, "週のデータとグラフ", const WeeklyGraphPage()),
-          _drawerTile(Icons.calendar_view_month, "4週間のデータ(ACT)", const MonthlyGraphPage()),
-          _drawerTile(Icons.timeline, "年間のデータとグラフ", const YearlyGraphPage()),
-          _drawerTile(Icons.phone_in_talk, "ワンタップ受診", const OneTapCallPage()),
+         _drawerTile(Icons.bar_chart, "週のデータとグラフ", WeeklyGraphPage(
+          pefRecords: pefRecords,
+          sleepSessions: sleepSessions,
+        )),
+
+
+          //_drawerTile(Icons.calendar_view_month, "4週間のデータ(ACT)", const MonthlyGraphPage()),
+          //_drawerTile(Icons.timeline, "年間のデータとグラフ", const YearlyGraphPage()),
+          //_drawerTile(Icons.phone_in_talk, "ワンタップ受診", const OneTapCallPage()),
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text("メインUI登録ページ"),
@@ -142,7 +154,7 @@ class _MainScreenState extends State<MainScreen> {
               _openRegistrationPage();
             },
           ),
-          _drawerTile(Icons.person, "アカウントページ", const AccountPage()),
+         // _drawerTile(Icons.person, "アカウントページ", const AccountPage()),
         ],
       ),
     );
@@ -166,10 +178,30 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildPeakFlowPicker() {
-    return SizedBox(height: 100, child: CupertinoPicker(itemExtent: 40, scrollController: FixedExtentScrollController(initialItem: (_currentPeakFlow - 100) ~/ 10), onSelectedItemChanged: (i) => setState(() => _currentPeakFlow = 100 + (i * 10)), children: List.generate(71, (i) => Center(child: Text('${100 + (i * 10)} L/min')))));
-  }
-
+Widget _buildPeakFlowPicker() {
+  return SizedBox(
+    height: 100,
+    child: CupertinoPicker(
+      itemExtent: 40,
+      scrollController: FixedExtentScrollController(
+        initialItem: (_currentPeakFlow - 100) ~/ 10,
+      ),
+      onSelectedItemChanged: (i) => setState(() => _currentPeakFlow = 100 + (i * 10)),
+      children: List.generate(71, (i) {
+        return Center(
+          child: Text(
+            '${100 + (i * 10)} L/min',
+            style: TextStyle(
+              fontSize: 24, // 見やすい大きさに
+              fontWeight: FontWeight.bold,
+              color: const Color.fromARGB(255, 4, 112, 221), // ★ここできれいなブルーに！
+            ),
+          ),
+        );
+      }),
+    ),
+  );
+}
   // 症状セクション（最初から並んでいる状態）
   Widget _buildSymptomGrid() {
     return Padding(
@@ -213,7 +245,28 @@ class _MainScreenState extends State<MainScreen> {
           label: Text(item),
           selected: selectionSet.contains(item),
           selectedColor: color.withValues(alpha: 0.3),
-          onSelected: (val) => setState(() => val ? selectionSet.add(item) : selectionSet.remove(item)),
+        onSelected: (val) {
+                setState(() {
+                  if (val) {
+                    selectionSet.add(item);
+                    // ここから追加
+                    if (item == '就寝') {
+                      activeSleepSession = SleepSession(bedTime: DateTime.now());
+                    } else if (item == '起床') {
+                      if (activeSleepSession != null) {
+                        sleepSessions.add(SleepSession(
+                          bedTime: activeSleepSession!.bedTime,
+                          wakeUpTime: DateTime.now(),
+                        ));
+                        activeSleepSession = null;
+                      }
+                    }
+                    // ここまで
+                  } else {
+                    selectionSet.remove(item);
+                  }
+                });
+              }, 
         )).toList(),
       ),
     );
@@ -365,39 +418,67 @@ class _MainUIRegistrationPageState extends State<MainUIRegistrationPage> {
 
 // --- スタブページ ---
 class WeeklyGraphPage extends StatelessWidget {
-  const WeeklyGraphPage({super.key});
+  // メイン画面から記録データを受け取るための「窓口」
+  final List<PefRecord> pefRecords;
+  final List<SleepSession> sleepSessions;
+
+  const WeeklyGraphPage({
+    super.key,
+    required this.pefRecords,
+    required this.sleepSessions,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // グラフに表示するサンプルの点（xが曜日、yがピークフロー値）
-    final List<FlSpot> spots = [
-      const FlSpot(0, 350), // 月曜
-      const FlSpot(1, 380), // 火曜
-      const FlSpot(2, 320), // 水曜
-      const FlSpot(3, 400), // 木曜
-      const FlSpot(4, 390), // 金曜
-      const FlSpot(5, 420), // 土曜
-      const FlSpot(6, 410), // 日曜
-    ];
-
     return Scaffold(
-      appBar: AppBar(title: const Text("週のピークフローグラフ")),
+      appBar: AppBar(title: const Text("週のデータとグラフ")),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            const Text("1週間の推移", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 30),
+            const Text("ピークフロー推移（直近7日間）", 
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
             AspectRatio(
               aspectRatio: 1.5,
               child: LineChart(
                 LineChartData(
                   minY: 0,
-                  maxY: 600,
+                  maxY: 800,
+                  // --- 睡眠セクションを背景に描画 ---
+                  rangeAnnotations: RangeAnnotations(
+                    verticalRangeAnnotations: sleepSessions.map((session) {
+                      return VerticalRangeAnnotation(
+                        // 開始（就寝）から終了（起床）までを薄いグレーで塗る
+                        x1: session.bedTime.weekday.toDouble() - 1,
+                        x2: (session.wakeUpTime ?? DateTime.now()).weekday.toDouble() - 1,
+                        color: Colors.grey.withValues(alpha: 0.2),
+                      );
+                    }).toList(),
+                  ),
+                  // --- 目標値のライン ---
+                  extraLinesData: ExtraLinesData(
+                    horizontalLines: [
+                      HorizontalLine(
+                        y: 500, // ここは後で設定の自己ベスト値と連動
+                        color: Colors.green.withOpacity(0.5),
+                        strokeWidth: 3,
+                        dashArray: [5, 5],
+                        label: HorizontalLineLabel(
+                          show: true,
+                          alignment: Alignment.topRight,
+                          labelResolver: (line) => '目標(500)',
+                        ),
+                      ),
+                    ],
+                  ),
+                  // --- 実際のピークフローの線 ---
                   lineBarsData: [
                     LineChartBarData(
-                      spots: spots,
-                      isCurved: true, // 線を滑らかにする
+                      spots: pefRecords.map((record) {
+                        return FlSpot(record.time.weekday.toDouble() - 1, record.value);
+                      }).toList(),
+                      isCurved: true,
                       color: Colors.blue,
                       barWidth: 4,
                       dotData: const FlDotData(show: true),
@@ -407,15 +488,11 @@ class WeeklyGraphPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Text("※現在はサンプルデータを表示しています"),
+            const Text("※グレーの帯は睡眠時間（就寝〜起床）を示します", 
+              style: TextStyle(fontSize: 12, color: Colors.grey)),
           ],
         ),
       ),
     );
   }
 }
-
-class MonthlyGraphPage extends StatelessWidget { const MonthlyGraphPage({super.key}); @override Widget build(BuildContext context) { return Scaffold(appBar: AppBar(title: const Text("4週間のデータ(ACT)")), body: const Center(child: Text("ACT自動計算ロジックをここに実装"))); } }
-class YearlyGraphPage extends StatelessWidget { const YearlyGraphPage({super.key}); @override Widget build(BuildContext context) { return Scaffold(appBar: AppBar(title: const Text("年間のグラフ")), body: const Center(child: Text("年間の傾向をここに実装"))); } }
-class OneTapCallPage extends StatelessWidget { const OneTapCallPage({super.key}); @override Widget build(BuildContext context) { return Scaffold(appBar: AppBar(title: const Text("ワンタップ受診")), body: const Center(child: Text("緊急連絡先ボタンをここに実装"))); } }
-class AccountPage extends StatelessWidget { const AccountPage({super.key}); @override Widget build(BuildContext context) { return Scaffold(appBar: AppBar(title: const Text("アカウント")), body: const Center(child: Text("ユーザー情報をここに実装"))); } }
