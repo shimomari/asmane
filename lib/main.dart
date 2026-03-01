@@ -41,12 +41,13 @@ class _MainScreenState extends State<MainScreen> {
   // --- 管理データ ---
   int _currentPeakFlow = 400;
   List<String> _mySymptoms = ['咳', 'たん', '息苦しさ', '喘鳴'];
+  Map<String, int> _symptomCounts = {'咳': 0, 'たん': 0, '息苦しさ': 0, '喘鳴': 0}; // ★この行を追加！
   List<String> _myTriggers = ['埃・ハウスダスト', '気圧変化', '風邪', '運動'];
   String _relieverName = "メプチン";
   String _pillName = "プレドニン";
 
   // --- 状態（選択・回数） ---
-  final Map<String, int> _symptomCounts = {}; 
+  
   final Set<String> _selectedTriggers = {};
   final Set<String> _selectedSleep = {};
   int _relieverCount = 0;
@@ -179,42 +180,46 @@ class _MainScreenState extends State<MainScreen> {
   }
 
 Widget _buildPeakFlowPicker() {
-  return SizedBox(
-    height: 100,
-    child: CupertinoPicker(
-      itemExtent: 40,
-      scrollController: FixedExtentScrollController(
-        initialItem: (_currentPeakFlow - 100) ~/ 10,
-      ),
-      onSelectedItemChanged: (i) => setState(() => _currentPeakFlow = 100 + (i * 10)),
-      children: List.generate(71, (i) {
-        return Center(
-          child: Text(
-            '${100 + (i * 10)} L/min',
-            style: TextStyle(
-              fontSize: 24, // 見やすい大きさに
-              fontWeight: FontWeight.bold,
-              color: const Color.fromARGB(255, 4, 112, 221), // ★ここできれいなブルーに！
+    return SizedBox(
+      height: 120,
+      child: CupertinoPicker(
+        itemExtent: 40,
+        scrollController: FixedExtentScrollController(
+          initialItem: (_currentPeakFlow - 100) ~/ 10,
+        ),
+        onSelectedItemChanged: (i) => setState(() => _currentPeakFlow = 100 + (i * 10)),
+        children: List.generate(71, (i) {
+          return Center(
+            child: Text(
+              '${100 + (i * 10)} L/min',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color.fromARGB(255, 0, 23, 226),
+              ),
             ),
-          ),
-        );
-      }),
-    ),
-  );
-}
-  // 症状セクション（最初から並んでいる状態）
-  Widget _buildSymptomGrid() {
+          );
+        }),
+      ),
+    );
+  }
+
+ Widget _buildSymptomGrid() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: _mySymptoms.map((s) {
-          int count = _symptomCounts[s] ?? 0;
-          Color bgColor = Colors.grey[200]!;
-          if (count == 1) bgColor = Colors.orange[100]!;
-          if (count == 2) bgColor = Colors.orange[300]!;
-          if (count == 3) bgColor = Colors.red[400]!;
+        spacing: 8,
+        runSpacing: 8,
+        children: _symptomCounts.keys.map((s) {
+          final count = _symptomCounts[s] ?? 0;
+          
+          // 強度によって色を分ける設定
+          Color bgColor = Colors.transparent;
+          Color borderColor = Colors.grey.shade400;
+          if (count == 1) { bgColor = Colors.orange.shade100; borderColor = Colors.orange.shade200; } // 軽度：薄い
+          if (count == 2) { bgColor = Colors.orange.shade400; borderColor = Colors.orange.shade600; } // 中度：オレンジ
+          if (count == 3) { bgColor = Colors.orange.shade800; borderColor = Colors.orange.shade900; } // 重度：濃いオレンジ
+
           return GestureDetector(
             onTap: () => setState(() => _symptomCounts[s] = (count + 1) % 4),
             child: Container(
@@ -222,11 +227,14 @@ Widget _buildPeakFlowPicker() {
               decoration: BoxDecoration(
                 color: bgColor,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: count > 0 ? Colors.orange : Colors.grey.shade400),
+                border: Border.all(color: borderColor),
               ),
               child: Text(
-                count > 0 ? "$s(${['','軽','中','重'][count]})" : s,
-                style: TextStyle(fontWeight: count > 0 ? FontWeight.bold : FontWeight.normal),
+                count > 0 ? "${['', '軽', '中', '重'][count]} : $s" : s,
+                style: TextStyle(
+                  fontWeight: count > 0 ? FontWeight.bold : FontWeight.normal,
+                  color: count >= 2 ? Colors.white : Colors.black87, // 濃い色の時は文字を白くして見やすく
+                ),
               ),
             ),
           );
@@ -235,6 +243,9 @@ Widget _buildPeakFlowPicker() {
     );
   }
 
+
+  // ★ 101行目のエラーを消し、症状ボタンを復活させる重要なパーツです
+  
   Widget _buildWrapChips(List<String> list, Set<String> selectionSet, Color color) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -274,7 +285,7 @@ Widget _buildPeakFlowPicker() {
 
   Widget _buildEmergencySection() {
     return Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-      _emergencyButton(_relieverName, _relieverCount, Colors.red, () => setState(() { 
+      _emergencyButton(_relieverName, _relieverCount, const Color.fromARGB(255, 9, 32, 240), () => setState(() { 
         _relieverCount = (_relieverCount + 1) % 5; 
         if (_relieverCount != 0 && _relieverStock > 0) _relieverStock--; 
       }), "残量: $_relieverStock"),
@@ -298,11 +309,22 @@ Widget _buildPeakFlowPicker() {
     ]);
   }
 
-  Widget _buildSubmitButton() {
+Widget _buildSubmitButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: ElevatedButton(
-        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("登録しました"))),
+        onPressed: () {
+          setState(() {
+            // ★ピークフローをリストに保存
+            pefRecords.insert(0, PefRecord(
+              time: DateTime.now(),
+              value: _currentPeakFlow.toDouble(),
+            ));
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("登録しました")),
+          );
+        },
         style: ElevatedButton.styleFrom(
           minimumSize: const Size(double.infinity, 56),
           backgroundColor: Colors.blueAccent,

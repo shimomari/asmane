@@ -15,3 +15,6 @@ class SleepSession {
 
   SleepSession({required this.bedTime, this.wakeUpTime});
 }
+// 18行目から追記
+List<PefRecord> pefRecords = [];
+List<SleepSession> sleepSessions = [];
