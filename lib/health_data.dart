@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 
 /// ピークフローの記録用データ
 class PefRecord {
@@ -15,6 +14,7 @@ class SleepSession {
 
   SleepSession({required this.bedTime, this.wakeUpTime});
 }
-// 18行目から追記
+
+// データの保存場所
 List<PefRecord> pefRecords = [];
 List<SleepSession> sleepSessions = [];
