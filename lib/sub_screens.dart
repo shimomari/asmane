@@ -1,3 +1,5 @@
+//sub_screens.dart
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'health_data.dart';
@@ -30,8 +32,8 @@ class WeeklyGraphPage extends StatelessWidget {
               aspectRatio: 1.5,
               child: LineChart(
                 LineChartData(
-                  minY: 0,
-                  maxY: 800,
+                  minY: graphMinY, // 200になる
+                  maxY: graphMaxY, // 600になる
                   // 睡眠時間を背景に描画
                   rangeAnnotations: RangeAnnotations(
                     verticalRangeAnnotations: sleepSessions.map((session) {
