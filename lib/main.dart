@@ -1,7 +1,5 @@
-//main.dart
-
 import 'package:flutter/material.dart';
-import 'main_screen.dart';
+import 'main_screen.dart'; // 作成したファイル名に合わせてください
 
 void main() {
   runApp(const AsmaneApp());
@@ -13,13 +11,13 @@ class AsmaneApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'アスマネ',
+      title: 'Asmane',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.lightBlue),
+        colorSchemeSeed: Colors.blueAccent,
       ),
-      home: const MainScreen(),
+      home: const MainScreen(), // ここでメイン画面を呼び出す
     );
   }
 }

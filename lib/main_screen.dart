@@ -1,10 +1,6 @@
-//main_screen.dart
-
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
-import 'health_data.dart';
-import 'sub_screens.dart'; // グラフや設定画面をここから読み込む
+import 'package:flutter/cupertino.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -14,319 +10,157 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  // ==========================================
-  // 1. 管理データ・状態 (State)
-  // ==========================================
-  int _currentPeakFlow = 400;
-  List<String> _mySymptoms = ['咳', 'たん', '息苦しさ', '喘鳴'];
-  List<String> _myTriggers = ['埃・ハウスダスト', '気圧変化', '風邪', '運動'];
-  String _relieverName = "メプチン";
-  String _pillName = "プレドニン";
-
-  final Map<String, int> _symptomCounts = {}; 
+  int _pefValue = 420;
+  final Map<String, int> _symptomLevels = {'咳': 0, 'たん': 0, '喘鳴': 0, '息苦しさ': 0};
+  final Map<String, bool> _sleepStates = {'就寝': false, '起床': false, '中途覚醒': false};
+  final List<String> _allTriggers = ['埃', '低気圧', '疲れ', '煙草', '天候']; 
   final Set<String> _selectedTriggers = {};
-  final Set<String> _selectedSleep = {};
-  int _relieverCount = 0;
-  int _relieverStock = 60;
-  int _pillCount = 0;
-  SleepSession? activeSleepSession;
-
-  // ==========================================
-  // 2. ロジック（画面遷移など）
-  // ==========================================
   
-  // 設定画面（登録ページ）を開き、結果を受け取る
-  Future<void> _openRegistrationPage() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MainUIRegistrationPage(
-          symptoms: _mySymptoms,
-          triggers: _myTriggers,
-          reliever: _relieverName,
-          pill: _pillName,
-        ),
-      ),
-    );
+  int _relieverCount = 0; 
+  int _relieverStock = 192; 
+  int _pillLevel = 0; 
 
-    // 設定画面からデータが戻ってきたら反映する
-    if (result != null) {
-      setState(() {
-        _mySymptoms = result['symptoms'];
-        _myTriggers = result['triggers'];
-        _relieverName = result['reliever'];
-        _pillName = result['pill'];
-      });
-    }
-  }
+  final TextEditingController _memoController = TextEditingController();
 
-  // ==========================================
-  // 3. メインUI構成 (buildメソッド)
-  // ==========================================
   @override
   Widget build(BuildContext context) {
+    String now = DateFormat('yyyy年MM月dd日 HH:mm').format(DateTime.now());
+
     return Scaffold(
-      appBar: AppBar(title: const Text('アスマネ')),
-      drawer: _buildDrawer(),
+      backgroundColor: const Color(0xFFF1F5F9),
+      appBar: AppBar(
+        title: const Text('Asmane', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.blueAccent)),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.white,
+      ),
+      drawer: const Drawer(),
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            _buildTimeHeader(),         // 日時表示
-            const Divider(),
-            
-            _buildSectionTitle('3. ピークフローの記録'),
-            _buildPeakFlowPicker(),     // 数値選択
-            const Divider(),
-            
-            _buildSectionTitle('4. 症状の記録 (タップで強度変更)'),
-            _buildSymptomGrid(),        // 症状ボタン群
-            const Divider(),
-            
-            _buildSectionTitle('5. 睡眠'),
-            _buildSleepChips(),         // 睡眠（就寝・起床）
-            const Divider(),
-            
-            _buildSectionTitle('6. トリガーの記録'),
-            _buildTriggerChips(),       // トリガー選択
-            const Divider(),
-            
-            _buildSectionTitle('7&8. 緊急時の記録'),
-            _buildEmergencySection(),   // 緊急ボタン
-            const Divider(),
-            
-            _buildSectionTitle('9. 自由メモ'),
-            _buildMemoField(),          // テキスト入力
-            
-            const SizedBox(height: 20),
-            _buildSubmitButton(),       // 最終登録ボタン
-            const SizedBox(height: 50),
+            _buildDateTimeHeader(now),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  _buildPeakFlowCard(),
+                  _buildSymptomCard(),
+                  _buildTriggerCard(),
+                  
+                  // 薬剤使用：コンパクトな横幅半分サイズ
+                  _buildCard(
+                    title: '薬剤使用 (タップで追加)',
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center, // 中央寄せ
+                      children: [
+                        SizedBox(
+                          width: 140, // 横幅を限定
+                          child: _buildMedicineChip(
+                            name: 'メプチン',
+                            subtitle: '残: $_relieverStock',
+                            level: _relieverCount,
+                            maxLevel: 4,
+                            baseColor: Colors.blue,
+                            onTap: () => setState(() {
+                              _relieverCount = (_relieverCount + 1) % 5;
+                              if (_relieverCount > 0) _relieverStock--;
+                            }),
+                          ),
+                        ),
+                        const SizedBox(width: 20), // ボタン間の隙間
+                        SizedBox(
+                          width: 140, // 横幅を限定
+                          child: _buildMedicineChip(
+                            name: 'プレドニン',
+                            subtitle: '頓服薬',
+                            level: _pillLevel,
+                            maxLevel: 2,
+                            baseColor: Colors.purple,
+                            onTap: () => setState(() => _pillLevel = (_pillLevel + 1) % 3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  _buildSleepCard(),
+                  _buildMemoCard(),
+                  const SizedBox(height: 24),
+                  _buildSaveButton(),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  // ==========================================
-  // 4. 各セクションのUI部品
-  // ==========================================
+  Widget _buildMedicineChip({
+    required String name, 
+    required String subtitle, 
+    required int level, 
+    required int maxLevel,
+    required Color baseColor, 
+    required VoidCallback onTap
+  }) {
+    Color bgColor;
+    Color textColor;
 
-  // --- 共通: セクションタイトル ---
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Align(
-        alignment: Alignment.centerLeft, 
-        child: Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold))
-      ),
-    );
-  }
-
-  // --- ヘッダー: 現在時刻 ---
-  Widget _buildTimeHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Text(
-        DateFormat('yyyy年MM月dd日 HH:mm').format(DateTime.now()), 
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
-      ),
-    );
-  }
-
-  // --- セクション3: ピークフローピッカー ---
-  Widget _buildPeakFlowPicker() {
-    return SizedBox(
-      height: 100,
-      child: CupertinoPicker(
-        itemExtent: 40,
-        scrollController: FixedExtentScrollController(initialItem: (_currentPeakFlow - 100) ~/ 10),
-        onSelectedItemChanged: (i) => setState(() => _currentPeakFlow = 100 + (i * 10)),
-        children: List.generate(71, (i) => Center(
-          child: Text(
-            '${100 + (i * 10)} L/min', 
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue)
-          ),
-        )),
-      ),
-    );
-  }
-
-  // --- セクション4: 症状グリッド ---
-  Widget _buildSymptomGrid() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Wrap(
-        spacing: 10, runSpacing: 10,
-        children: _mySymptoms.map((s) {
-          int count = _symptomCounts[s] ?? 0;
-          return GestureDetector(
-            onTap: () => setState(() => _symptomCounts[s] = (count + 1) % 4),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: [Colors.grey[200]!, Colors.orange[100]!, Colors.orange[300]!, Colors.red[400]!][count],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: count > 0 ? Colors.orange : Colors.grey.shade400),
-              ),
-              child: Text(
-                count > 0 ? "$s(${['','軽','中','重'][count]})" : s,
-                style: TextStyle(fontWeight: count > 0 ? FontWeight.bold : FontWeight.normal),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  // --- セクション5&6: チップUI (睡眠・トリガー) ---
-  Widget _buildSleepChips() => _buildWrapChips(['就寝', '起床', '中途覚醒'], _selectedSleep, Colors.blue, isSleep: true);
-  Widget _buildTriggerChips() => _buildWrapChips(_myTriggers, _selectedTriggers, Colors.green);
-
-  // --- セクション7&8: 緊急ボタン ---
-  Widget _buildEmergencySection() {
-    return Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-      _emergencyButton(_relieverName, _relieverCount, Colors.blue, () => setState(() { 
-        _relieverCount = (_relieverCount + 1) % 5; 
-        if (_relieverCount != 0 && _relieverStock > 0) _relieverStock--; 
-      }), "残量: $_relieverStock"),
-      _emergencyButton(_pillName, _pillCount, Colors.purple, () => setState(() => _pillCount = (_pillCount + 1) % 3), ""),
-    ]);
-  }
-
-  // --- セクション9: メモ入力 ---
-  Widget _buildMemoField() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      child: TextField(
-        maxLength: 50, 
-        decoration: InputDecoration(border: OutlineInputBorder(), hintText: '50文字程度')
-      ),
-    );
-  }
-
-  // --- 登録ボタン ---
-  Widget _buildSubmitButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: ElevatedButton(
-        onPressed: () {
-          setState(() {
-            pefRecords.add(PefRecord(time: DateTime.now(), value: _currentPeakFlow.toDouble()));
-          });
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("登録しました")));
-        },
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 56),
-          backgroundColor: Colors.blueAccent,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-        child: const Text("この内容で登録する", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-
-  // ==========================================
-  // 5. 補助用UIメソッド (共通パーツ)
-  // ==========================================
-  
-  // 汎用チップ作成
-  Widget _buildWrapChips(List<String> list, Set<String> selectionSet, Color color, {bool isSleep = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Wrap(
-        spacing: 8, runSpacing: 8,
-        children: list.map((item) => FilterChip(
-          label: Text(item),
-          selected: selectionSet.contains(item),
-          onSelected: (val) {
-            setState(() {
-              if (val) {
-                selectionSet.add(item);
-                if (isSleep && item == '就寝') activeSleepSession = SleepSession(bedTime: DateTime.now());
-                if (isSleep && item == '起床' && activeSleepSession != null) {
-                  sleepSessions.add(SleepSession(bedTime: activeSleepSession!.bedTime, wakeUpTime: DateTime.now()));
-                  activeSleepSession = null;
-                }
-              } else {
-                selectionSet.remove(item);
-              }
-            });
-          }, 
-        )).toList(),
-      ),
-    );
-  }
-
-// --- 段階的に色（Color）そのものを変化させる緊急ボタンUI ---
-  Widget _emergencyButton(String name, int count, Color baseColor, VoidCallback onTap, String sub) {
-    // 回数に応じた「具体的な色」の指定
-    Color displayColor;
-    
-    if (count == 0) {
-      displayColor = Colors.grey[100]!; // 未使用：薄いグレー
-    } else if (count == 1) {
-      displayColor = Colors.blue[100]!; // 1回：薄い水色
-    } else if (count == 2) {
-      displayColor = Colors.blue[400]!; // 2回：標準的な青
-    } else if (count == 3) {
-      displayColor = Colors.blue[800]!; // 3回：濃い青
+    if (level == 0) {
+      bgColor = Colors.grey.shade100;
+      textColor = Colors.black54;
+    } else if (level >= maxLevel) {
+      // プレドニン最大時は「くっきりした赤紫」
+      bgColor = (name == 'プレドニン') ? const Color(0xFFD81B60) : const Color(0xFF3F51B5);
+      textColor = Colors.white;
     } else {
-      displayColor = const Color(0xFF000080); // 4回以上：紺色 (Navy)
+      final List<double> opacities = [0.0, 0.15, 0.5, 0.85];
+      bgColor = baseColor.withValues(alpha: opacities[level]);
+      // 1-2回目は黒、3回目以上は白
+      textColor = (level <= 2) ? Colors.black87 : Colors.white;
     }
 
-    return Column(children: [
-      Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-      const SizedBox(height: 8),
-      GestureDetector(
-        onTap: onTap,
-        child: CircleAvatar(
-          radius: 35,
-          backgroundColor: displayColor,
-          child: Text(
-            count == 0 ? "未使用" : "$count回", 
-            style: TextStyle(
-              // 2回目以降は白文字にしたほうが視認性が高まります
-              color: count >= 2 ? Colors.white : Colors.black87,
-              fontSize: 12, 
-              fontWeight: FontWeight.bold
-            )
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: level == 0 ? Colors.grey.shade300 : Colors.transparent),
         ),
-      ),
-      if (sub.isNotEmpty) Text(sub, style: const TextStyle(fontSize: 11))
-    ]);
-  }
-
-
-
-  // サイドメニュー (Drawer)
-  Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(color: Colors.lightBlue),
-            child: Text('アスマネ', style: TextStyle(color: Colors.white, fontSize: 24)),
-          ),
-          ListTile(
-            leading: const Icon(Icons.bar_chart),
-            title: const Text("週のデータとグラフ"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (context) => WeeklyGraphPage(pefRecords: pefRecords, sleepSessions: sleepSessions)));
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text("メインUI登録ページ"),
-            onTap: () {
-              Navigator.pop(context);
-              _openRegistrationPage();
-            },
-          ),
-        ],
+        child: Column(
+          children: [
+            Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: textColor)),
+            const SizedBox(height: 4),
+            Text(level == 0 ? subtitle : '$level回', 
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor.withValues(alpha: 0.8))
+            ),
+            if (level > 0 && name == 'メプチン')
+              Text('残$_relieverStock',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: textColor)
+              ),
+          ],
+        ),
       ),
     );
   }
+
+  // --- その他のパーツは安定版を維持 ---
+  Widget _buildSymptomCard() => _buildCard(title: '症状の強さ', child: Center(child: Wrap(spacing: 8, runSpacing: 8, children: _symptomLevels.keys.map((s) => _buildSymptomChip(label: s, level: _symptomLevels[s]!, onTap: () => setState(() => _symptomLevels[s] = (_symptomLevels[s]! + 1) % 4))).toList())));
+  Widget _buildTriggerCard() => _buildCard(title: '要因・誘因', child: Center(child: Wrap(spacing: 8, runSpacing: 8, children: _allTriggers.map((t) => _buildToggleButton(label: t, isActive: _selectedTriggers.contains(t), activeColor: Colors.orange.shade400, onTap: () => setState(() => _selectedTriggers.contains(t) ? _selectedTriggers.remove(t) : _selectedTriggers.add(t)))).toList())));
+  Widget _buildSleepCard() => _buildCard(title: '睡眠', child: Center(child: Wrap(spacing: 12, children: _sleepStates.keys.map((key) => _buildToggleButton(label: key, isActive: _sleepStates[key]!, activeColor: Colors.indigo.shade600, onTap: () => setState(() => _sleepStates[key] = !_sleepStates[key]!))).toList())));
+  Widget _buildMemoCard() => _buildCard(title: '自由メモ', child: TextField(controller: _memoController, maxLength: 50, decoration: InputDecoration(hintText: '体調の変化など...', filled: true, fillColor: Colors.grey.shade50, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), counterText: "")));
+  Widget _buildSaveButton() => SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('記録を保存しました'))), style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))), child: const Text('記録を保存する', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))));
+  Widget _buildPeakFlowCard() => _buildCard(title: 'ピークフロー値 (L/min)', child: Container(height: 80, decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)), child: CupertinoPicker(itemExtent: 40, scrollController: FixedExtentScrollController(initialItem: _pefValue ~/ 10), onSelectedItemChanged: (v) => setState(() => _pefValue = v * 10), children: List.generate(81, (i) => Center(child: Text('${i * 10}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: (i * 10 == _pefValue) ? Colors.blue.shade700 : Colors.black12)))))));
+  Widget _buildCard({required String title, required Widget child}) => Container(width: double.infinity, margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8)]), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.blueGrey.shade300)), const SizedBox(height: 10), child]));
+  Widget _buildSymptomChip({required String label, required int level, required VoidCallback onTap}) { final List<Color> bgColors = [Colors.grey.shade100, Colors.blue.shade100, Colors.blue.shade400, Colors.indigo.shade600]; final List<Color> textColors = [Colors.black54, Colors.blue.shade900, Colors.white, Colors.white]; return InkWell(onTap: onTap, child: AnimatedContainer(duration: const Duration(milliseconds: 150), constraints: const BoxConstraints(minWidth: 65), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12), decoration: BoxDecoration(color: bgColors[level], borderRadius: BorderRadius.circular(10)), child: Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColors[level])))); }
+  Widget _buildToggleButton({required String label, required bool isActive, required Color activeColor, required VoidCallback onTap}) => InkWell(onTap: onTap, child: AnimatedContainer(duration: const Duration(milliseconds: 150), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), decoration: BoxDecoration(color: isActive ? activeColor : Colors.grey.shade100, borderRadius: BorderRadius.circular(8)), child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isActive ? Colors.white : Colors.black54))));
+  Widget _buildDateTimeHeader(String now) => Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 8), child: Center(child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.access_time, size: 14, color: Colors.blueGrey.shade300), const SizedBox(width: 6), Text(now, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey, fontSize: 13))])));
 }
